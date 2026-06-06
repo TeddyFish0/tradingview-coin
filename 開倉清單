@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP 開倉計畫 | 終極交易系統</title>
+    <style>
+        :root { --bg-color: #0f172a; --panel-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent-green: #10b981; --accent-red: #ef4444; --accent-blue: #3b82f6; --border-color: #334155; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        /* 頂部導航列 */
+        header { margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-btn { background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        .nav-btn:hover { background: var(--accent-blue); color: white; }
+
+        /* 步進器與表單 */
+        .stepper-wrapper { background-color: var(--panel-bg); padding: 30px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .stepper { display: flex; justify-content: space-between; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; }
+        .step { display: flex; align-items: center; color: var(--text-muted); font-size: 14px; transition: 0.3s; }
+        .step.active { color: var(--accent-blue); font-weight: bold; }
+        .step-number { display: flex; justify-content: center; align-items: center; width: 24px; height: 24px; border-radius: 50%; background-color: var(--border-color); margin-right: 8px; color: white; font-size: 12px; }
+        .step.active .step-number { background-color: var(--accent-blue); }
+
+        .step-content { display: none; animation: fadeIn 0.3s; }
+        .step-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+        input, textarea { width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; font-size: 14px; }
+        input:focus, textarea:focus { outline: none; border-color: var(--accent-blue); }
+        
+        .direction-btns { display: flex; gap: 10px; }
+        .dir-btn { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; text-align: center; font-size: 14px; }
+        .dir-btn.active.long { background-color: rgba(16, 185, 129, 0.2); border-color: var(--accent-green); color: var(--accent-green); font-weight: bold; }
+        .dir-btn.active.short { background-color: rgba(239, 68, 68, 0.2); border-color: var(--accent-red); color: var(--accent-red); font-weight: bold; }
+
+        .checkbox-group label { display: flex; align-items: center; font-size: 14px; cursor: pointer; margin-bottom: 12px; color: var(--text-main); }
+        .checkbox-group input { margin-right: 10px; transform: scale(1.2); }
+
+        .action-btns { display: flex; justify-content: space-between; margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        button { padding: 10px 24px; border: none; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); }
+        .btn-outline:hover { background: var(--border-color); }
+        .btn-primary { background-color: var(--accent-blue); color: white; width: 100%; max-width: 200px; }
+        .btn-primary:hover { background-color: #2563eb; }
+        .btn-success { background-color: var(--accent-green); color: white; width: 100%; max-width: 200px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>✚ 新建開倉計畫 (SOP)</h1>
+        <a href="journal.html" class="nav-btn">切換至 ➔ 復盤日誌</a>
+    </header>
+
+    <div class="stepper-wrapper">
+        <div class="stepper">
+            <div class="step active" id="ind-1"><span class="step-number">1</span>標的與理由</div>
+            <div class="step" id="ind-2"><span class="step-number">2</span>風控與倉位</div>
+            <div class="step" id="ind-3"><span class="step-number">3</span>紀律檢核</div>
+        </div>
+
+        <form id="wizard-form">
+            <div class="step-content active" id="step-1">
+                <div class="form-group">
+                    <label>合約標的 (如: BTCUSDT)</label>
+                    <input type="text" id="symbol" placeholder="輸入交易對" required>
+                </div>
+                <div class="form-group">
+                    <label>方向</label>
+                    <div class="direction-btns">
+                        <div class="dir-btn active long" onclick="setDir('Long', this)">📈 做多 (Long)</div>
+                        <div class="dir-btn short" onclick="setDir('Short', this)">📉 做空 (Short)</div>
+                    </div>
+                    <input type="hidden" id="direction" value="Long">
+                </div>
+                <div class="form-group">
+                    <label>進場理由 (至少 10 字)</label>
+                    <textarea id="reason" rows="4" placeholder="詳細說明你的進場邏輯..."></textarea>
+                </div>
+            </div>
+
+            <div class="step-content" id="step-2">
+                <div class="form-group"><label>計畫進場價格</label><input type="number" id="entry" step="any"></div>
+                <div class="form-group"><label>硬止損價格</label><input type="number" id="sl" step="any"></div>
+                <div class="form-group"><label>第一止盈目標</label><input type="number" id="tp" step="any"></div>
+            </div>
+
+            <div class="step-content" id="step-3">
+                <h3 style="margin-bottom: 15px; color: var(--accent-blue);">開倉前最後檢核：</h3>
+                <div class="checkbox-group">
+                    <label><input type="checkbox" class="chk"> 我確認這不是因為情緒 FOMO 而衝動進場。</label>
+                    <label><input type="checkbox" class="chk"> 我已確認 1H/4H 的大級別趨勢方向一致。</label>
+                    <label><input type="checkbox" class="chk"> 虧損若觸發止損，我絕對會無條件離場，絕不扛單。</label>
+                </div>
+            </div>
+
+            <div class="action-btns">
+                <button type="button" class="btn-outline" id="prev-btn" style="display:none;" onclick="changeStep(-1)">← 返回</button>
+                <div style="flex-grow: 1;"></div>
+                <button type="button" class="btn-primary" id="next-btn" onclick="changeStep(1)">下一步 →</button>
+                <button type="button" class="btn-success" id="submit-btn" style="display:none;" onclick="createTrade()">💾 儲存並跳轉至日誌</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentStep = 1;
+    let trades = JSON.parse(localStorage.getItem('trading_master')) || [];
+
+    function setDir(dir, el) {
+        document.getElementById('direction').value = dir;
+        document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active', 'long', 'short'));
+        el.classList.add('active', dir === 'Long' ? 'long' : 'short');
+    }
+
+    function changeStep(dir) {
+        if (dir === 1 && currentStep === 1) {
+            if(!document.getElementById('symbol').value) return alert('請填寫標的');
+            if(document.getElementById('reason').value.length < 10) return alert('進場理由至少 10 字');
+        }
+        if (dir === 1 && currentStep === 2) {
+            if(!document.getElementById('entry').value || !document.getElementById('sl').value) return alert('請填寫進場與止損價');
+        }
+
+        document.getElementById(`step-${currentStep}`).classList.remove('active');
+        document.getElementById(`ind-${currentStep}`).classList.remove('active');
+        currentStep += dir;
+        document.getElementById(`step-${currentStep}`).classList.add('active');
+        document.getElementById(`ind-${currentStep}`).classList.add('active');
+
+        document.getElementById('prev-btn').style.display = currentStep === 1 ? 'none' : 'block';
+        document.getElementById('next-btn').style.display = currentStep === 3 ? 'none' : 'block';
+        document.getElementById('submit-btn').style.display = currentStep === 3 ? 'block' : 'none';
+    }
+
+    function createTrade() {
+        let chks = document.querySelectorAll('.chk');
+        for(let c of chks) if(!c.checked) return alert('必須勾選所有紀律項目才能開倉！');
+
+        const entry = parseFloat(document.getElementById('entry').value);
+        const sl = parseFloat(document.getElementById('sl').value);
+        const tp = parseFloat(document.getElementById('tp').value);
+        let rr = '-';
+        if(entry && sl && tp) {
+            rr = (Math.abs(tp - entry) / Math.abs(entry - sl)).toFixed(2);
+        }
+
+        const newTrade = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('en-US', {hour12: false}).slice(0,5),
+            symbol: document.getElementById('symbol').value.toUpperCase(),
+            dir: document.getElementById('direction').value,
+            reason: document.getElementById('reason').value,
+            rr: rr,
+            status: 'Open', 
+            pnlPct: null,
+            pnlAmt: null,
+            notes: ''
+        };
+
+        trades.unshift(newTrade);
+        localStorage.setItem('trading_master', JSON.stringify(trades));
+        
+        // 儲存後自動跳轉至日誌頁面
+        window.location.href = 'journal.html';
+    }
+</script>
+
+</body>
+</html>
