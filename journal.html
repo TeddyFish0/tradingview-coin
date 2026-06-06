@@ -11,22 +11,28 @@
         .container { max-width: 1200px; margin: 0 auto; }
         
         /* 頂部導航列 */
-        header { margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        header { margin-bottom: 25px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
         .nav-btn { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; cursor: pointer; font-size: 14px; }
         .nav-btn:hover { background: var(--accent-green); color: white; }
         .btn-backup { border-color: var(--text-muted); color: var(--text-muted); }
         .btn-backup:hover { background: var(--text-muted); color: white; }
         .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
+        /* 時間篩選列 */
+        .filter-group { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .filter-btn { background: var(--panel-bg); border: 1px solid var(--border-color); color: var(--text-muted); padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 13px; font-weight: bold; white-space: nowrap; transition: 0.2s; }
+        .filter-btn:hover { border-color: var(--accent-blue); color: var(--text-main); }
+        .filter-btn.active { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+
         /* 警報提示區 */
         #global-warning { display: none; background-color: var(--warning-bg); border: 2px solid var(--warning-border); color: #fca5a5; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
 
         /* 儀表板 */
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .card { background-color: var(--panel-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 8px; text-align: center; }
-        .card-title { font-size: 14px; color: var(--text-muted); margin-bottom: 5px; }
-        .card-value { font-size: 26px; font-weight: bold; }
+        .card-title { font-size: 13px; color: var(--text-muted); margin-bottom: 5px; }
+        .card-value { font-size: 24px; font-weight: bold; }
         .pnl-positive { color: var(--accent-green); }
         .pnl-negative { color: var(--accent-red); }
 
@@ -66,15 +72,23 @@
         </div>
     </header>
 
+    <div class="filter-group">
+        <button class="filter-btn active" onclick="setFilter('all', this)">全部紀錄</button>
+        <button class="filter-btn" onclick="setFilter('today', this)">當日</button>
+        <button class="filter-btn" onclick="setFilter('7days', this)">最近 7 日</button>
+        <button class="filter-btn" onclick="setFilter('31days', this)">最近 31 日</button>
+    </div>
+
     <div id="global-warning">
-        🚨 系統嚴重警告：你的歷史復盤中有單筆交易虧損 ≥ 10%！<br>
+        🚨 系統嚴重警告：篩選區間內有單筆交易虧損 ≥ 10%！<br>
         「請暫停任何開倉動作，確認心態回穩，絕不報復性交易！」
     </div>
 
     <div class="dashboard">
         <div class="card"><div class="card-title">已平倉筆數</div><div class="card-value" id="total-trades">0</div></div>
-        <div class="card"><div class="card-title">歷史勝率</div><div class="card-value" id="win-rate">0%</div></div>
-        <div class="card"><div class="card-title">累計總收益</div><div class="card-value" id="total-pnl">$0.00</div></div>
+        <div class="card"><div class="card-title">區間勝率</div><div class="card-value" id="win-rate">0%</div></div>
+        <div class="card"><div class="card-title">累計總收益 ($)</div><div class="card-value" id="total-pnl-amt">$0.00</div></div>
+        <div class="card"><div class="card-title">累計總收益 (%)</div><div class="card-value" id="total-pnl-pct">0.00%</div></div>
         <div class="card"><div class="card-title">單筆最大虧損</div><div class="card-value" id="max-loss">0%</div></div>
     </div>
 
@@ -119,36 +133,61 @@
 
 <script>
     let trades = JSON.parse(localStorage.getItem('trading_master')) || [];
+    let currentFilter = 'all'; // 預設顯示全部
 
     window.onload = function() { renderAll(); };
+
+    // ================= 時間篩選功能 =================
+    
+    function setFilter(range, btnElement) {
+        currentFilter = range;
+        
+        // 切換按鈕的視覺外觀
+        document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+        btnElement.classList.add('active');
+        
+        renderAll();
+    }
+
+    function getFilteredTrades() {
+        if (currentFilter === 'all') return trades;
+
+        const now = new Date();
+        // 取得今天的凌晨 00:00:00 的時間戳記
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const msPerDay = 24 * 60 * 60 * 1000;
+
+        return trades.filter(t => {
+            const tradeDate = new Date(t.date).getTime();
+            
+            if (currentFilter === 'today') {
+                return tradeDate >= startOfToday;
+            } else if (currentFilter === '7days') {
+                return tradeDate >= (now.getTime() - 7 * msPerDay);
+            } else if (currentFilter === '31days') {
+                return tradeDate >= (now.getTime() - 31 * msPerDay);
+            }
+            return true;
+        });
+    }
 
     // ================= 備份功能 (匯出 / 匯入) =================
     
     function exportData() {
         if(trades.length === 0) return alert('目前沒有任何交易紀錄可以匯出！');
-        
-        // 將資料轉換成 JSON 格式的文字
         const dataStr = JSON.stringify(trades, null, 2);
-        // 建立 Blob 物件
         const blob = new Blob([dataStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
-        
-        // 建立隱藏的下載連結並自動點擊
         const a = document.createElement('a');
         a.href = url;
-        // 檔名會自動加上今天的日期
         a.download = `Trading_Backup_${new Date().toISOString().slice(0,10)}.json`;
         document.body.appendChild(a);
         a.click();
-        
-        // 清理記憶體
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
 
-    function triggerImport() {
-        document.getElementById('import-file').click();
-    }
+    function triggerImport() { document.getElementById('import-file').click(); }
 
     function importData(event) {
         const file = event.target.files[0];
@@ -158,8 +197,6 @@
         reader.onload = function(e) {
             try {
                 const importedData = JSON.parse(e.target.result);
-                
-                // 簡單的格式驗證 (確認是否為陣列)
                 if(Array.isArray(importedData)) {
                     if(confirm(`偵測到 ${importedData.length} 筆備份資料。\n警告：匯入將會覆蓋你目前的資料，是否繼續？`)) {
                         trades = importedData;
@@ -167,12 +204,11 @@
                         alert('✅ 資料匯入成功！');
                     }
                 } else {
-                    alert('❌ 匯入失敗：檔案格式不正確，請確認上傳的是系統匯出的 JSON 檔。');
+                    alert('❌ 匯入失敗：檔案格式不正確。');
                 }
             } catch(err) {
-                alert('❌ 讀取檔案失敗：請確認檔案未損毀。');
+                alert('❌ 讀取檔案失敗：檔案損毀或格式不符。');
             }
-            // 重置 input 以便下次能選同一個檔案
             event.target.value = '';
         };
         reader.readAsText(file);
@@ -222,15 +258,19 @@
     }
 
     function renderAll() {
+        // 先取得被時間過濾器篩選後的資料
+        const filteredTradesList = getFilteredTrades();
+        
         const tbody = document.getElementById('trade-body');
         tbody.innerHTML = '';
         
-        let closedTrades = trades.filter(t => t.status === 'Closed');
+        let closedTrades = filteredTradesList.filter(t => t.status === 'Closed');
 
-        trades.forEach(t => {
+        // 渲染表格 (只顯示篩選後的資料)
+        filteredTradesList.forEach(t => {
             const tr = document.createElement('tr');
-            let pnlPctStr = t.status === 'Closed' ? `${t.pnlPct >= 0 ? '+' : ''}${t.pnlPct}%` : '-';
-            let pnlAmtStr = t.status === 'Closed' ? `${t.pnlAmt >= 0 ? '+' : ''}$${t.pnlAmt}` : '-';
+            let pnlPctStr = t.status === 'Closed' ? `${t.pnlPct >= 0 ? '+' : ''}${t.pnlPct.toFixed(2)}%` : '-';
+            let pnlAmtStr = t.status === 'Closed' ? `${t.pnlAmt >= 0 ? '+' : ''}$${t.pnlAmt.toFixed(2)}` : '-';
             
             let pnlClass = t.status === 'Closed' ? (t.pnlPct >= 0 ? 'pnl-positive' : 'pnl-negative') : '';
             let statusBadge = t.status === 'Open' ? '<span class="status-open">🟡 持倉中</span>' : '<span class="status-closed">已平倉</span>';
@@ -254,24 +294,35 @@
             tbody.appendChild(tr);
         });
 
+        // 渲染儀表板數據 (基於篩選後的已平倉資料計算)
         document.getElementById('total-trades').innerText = closedTrades.length;
         if(closedTrades.length > 0) {
             const wins = closedTrades.filter(t => t.pnlPct > 0).length;
             document.getElementById('win-rate').innerText = ((wins / closedTrades.length) * 100).toFixed(1) + '%';
             
-            const total = closedTrades.reduce((sum, t) => sum + t.pnlAmt, 0);
-            const pnlEl = document.getElementById('total-pnl');
-            pnlEl.innerText = (total >= 0 ? '+' : '') + '$' + total.toFixed(2);
-            pnlEl.className = 'card-value ' + (total >= 0 ? 'pnl-positive' : 'pnl-negative');
+            // 計算累計總金額 ($)
+            const totalAmt = closedTrades.reduce((sum, t) => sum + t.pnlAmt, 0);
+            const pnlAmtEl = document.getElementById('total-pnl-amt');
+            pnlAmtEl.innerText = (totalAmt >= 0 ? '+' : '') + '$' + totalAmt.toFixed(2);
+            pnlAmtEl.className = 'card-value ' + (totalAmt >= 0 ? 'pnl-positive' : 'pnl-negative');
 
+            // 計算累計總比例 (%)
+            const totalPct = closedTrades.reduce((sum, t) => sum + t.pnlPct, 0);
+            const pnlPctEl = document.getElementById('total-pnl-pct');
+            pnlPctEl.innerText = (totalPct >= 0 ? '+' : '') + totalPct.toFixed(2) + '%';
+            pnlPctEl.className = 'card-value ' + (totalPct >= 0 ? 'pnl-positive' : 'pnl-negative');
+
+            // 尋找最大單筆虧損
             const minPct = Math.min(...closedTrades.map(t => t.pnlPct));
-            document.getElementById('max-loss').innerText = (minPct < 0 ? minPct : 0) + '%';
+            document.getElementById('max-loss').innerText = (minPct < 0 ? minPct.toFixed(2) : 0) + '%';
             
             document.getElementById('global-warning').style.display = minPct <= -10 ? 'block' : 'none';
         } else {
             document.getElementById('win-rate').innerText = '0%';
-            document.getElementById('total-pnl').innerText = '$0.00';
-            document.getElementById('total-pnl').className = 'card-value';
+            document.getElementById('total-pnl-amt').innerText = '$0.00';
+            document.getElementById('total-pnl-amt').className = 'card-value';
+            document.getElementById('total-pnl-pct').innerText = '0.00%';
+            document.getElementById('total-pnl-pct').className = 'card-value';
             document.getElementById('max-loss').innerText = '0%';
             document.getElementById('global-warning').style.display = 'none';
         }
