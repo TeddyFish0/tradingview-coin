@@ -11,9 +11,12 @@
         .container { max-width: 1200px; margin: 0 auto; }
         
         /* 頂部導航列 */
-        header { margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .nav-btn { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        header { margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; }
+        .nav-btn { background: transparent; border: 1px solid var(--accent-green); color: var(--accent-green); padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; cursor: pointer; font-size: 14px; }
         .nav-btn:hover { background: var(--accent-green); color: white; }
+        .btn-backup { border-color: var(--text-muted); color: var(--text-muted); }
+        .btn-backup:hover { background: var(--text-muted); color: white; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
         /* 警報提示區 */
         #global-warning { display: none; background-color: var(--warning-bg); border: 2px solid var(--warning-border); color: #fca5a5; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; font-weight: bold; animation: pulse 2s infinite; }
@@ -30,7 +33,7 @@
         /* 歷史表格區 */
         .log-panel { background-color: var(--panel-bg); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
-        th, td { padding: 15px 10px; border-bottom: 1px solid var(--border-color); }
+        th, td { padding: 15px 10px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
         th { color: var(--text-muted); font-weight: normal; }
         .status-open { color: var(--accent-yellow); font-weight: bold; border: 1px solid var(--accent-yellow); padding: 4px 8px; border-radius: 4px; font-size: 12px; }
         .status-closed { color: var(--text-muted); font-size: 12px; }
@@ -54,7 +57,13 @@
 <div class="container">
     <header>
         <h1>📋 交易紀錄與復盤日誌</h1>
-        <a href="index.html" class="nav-btn">✚ 新增開倉計畫 ➔</a>
+        <div class="header-actions">
+            <button class="nav-btn btn-backup" onclick="exportData()">💾 匯出備份</button>
+            <button class="nav-btn btn-backup" onclick="triggerImport()">📂 匯入備份</button>
+            <input type="file" id="import-file" style="display: none;" accept=".json" onchange="importData(event)">
+            
+            <a href="index.html" class="nav-btn">✚ 新增開倉計畫 ➔</a>
+        </div>
     </header>
 
     <div id="global-warning">
@@ -112,6 +121,64 @@
     let trades = JSON.parse(localStorage.getItem('trading_master')) || [];
 
     window.onload = function() { renderAll(); };
+
+    // ================= 備份功能 (匯出 / 匯入) =================
+    
+    function exportData() {
+        if(trades.length === 0) return alert('目前沒有任何交易紀錄可以匯出！');
+        
+        // 將資料轉換成 JSON 格式的文字
+        const dataStr = JSON.stringify(trades, null, 2);
+        // 建立 Blob 物件
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        
+        // 建立隱藏的下載連結並自動點擊
+        const a = document.createElement('a');
+        a.href = url;
+        // 檔名會自動加上今天的日期
+        a.download = `Trading_Backup_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // 清理記憶體
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    function triggerImport() {
+        document.getElementById('import-file').click();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                
+                // 簡單的格式驗證 (確認是否為陣列)
+                if(Array.isArray(importedData)) {
+                    if(confirm(`偵測到 ${importedData.length} 筆備份資料。\n警告：匯入將會覆蓋你目前的資料，是否繼續？`)) {
+                        trades = importedData;
+                        saveData();
+                        alert('✅ 資料匯入成功！');
+                    }
+                } else {
+                    alert('❌ 匯入失敗：檔案格式不正確，請確認上傳的是系統匯出的 JSON 檔。');
+                }
+            } catch(err) {
+                alert('❌ 讀取檔案失敗：請確認檔案未損毀。');
+            }
+            // 重置 input 以便下次能選同一個檔案
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    // ================= 原有邏輯 =================
 
     function openModal(id) {
         document.getElementById('modal-id').value = id;
