@@ -54,7 +54,7 @@
 <div class="container">
     <header>
         <h1>📋 交易紀錄與復盤日誌</h1>
-        <a href="plan.html" class="nav-btn">✚ 新增開倉計畫 ➔</a>
+        <a href="index.html" class="nav-btn">✚ 新增開倉計畫 ➔</a>
     </header>
 
     <div id="global-warning">
@@ -172,7 +172,6 @@
                 ? `<button class="action-btn resolve" onclick="openModal(${t.id})">平倉</button>`
                 : `<button class="action-btn delete" onclick="deleteTrade(${t.id})">刪除</button>`;
 
-            // 整合理由與復盤筆記的顯示
             let noteDisplay = t.status === 'Open' ? `[計畫] ${t.reason}` : `[復盤] ${t.notes || '無'}`;
 
             tr.innerHTML = `
