@@ -61,14 +61,16 @@
 <body>
 
 <div class="container">
-    <header>
+   <header>
         <h1>📋 交易紀錄與復盤日誌</h1>
         <div class="header-actions">
             <button class="nav-btn btn-backup" onclick="exportData()">💾 匯出備份</button>
             <button class="nav-btn btn-backup" onclick="triggerImport()">📂 匯入備份</button>
             <input type="file" id="import-file" style="display: none;" accept=".json" onchange="importData(event)">
             
-            <a href="index.html" class="nav-btn">✚ 新增開倉計畫 ➔</a>
+            <a href="index.html" class="nav-btn">開倉計畫</a>
+            <a href="journal.html" class="nav-btn" style="background: var(--accent-green); color: white;">復盤日誌</a>
+            <a href="tools.html" class="nav-btn">交易工具箱</a>
         </div>
     </header>
 
