@@ -80,8 +80,8 @@
     </div>
 
     <div id="global-warning">
-        🚨 系統嚴重警告：篩選區間內有單筆交易虧損 ≥ 10%！<br>
-        「請暫停任何開倉動作，確認心態回穩，絕不報復性交易！」
+        🚨 系統嚴重警告：當日累計總虧損已達 ≥ 10%！<br>
+        「已觸發單日風控上限！請立刻關閉看盤軟體，絕不報復性交易！」
     </div>
 
     <div class="dashboard">
@@ -312,11 +312,27 @@
             pnlPctEl.innerText = (totalPct >= 0 ? '+' : '') + totalPct.toFixed(2) + '%';
             pnlPctEl.className = 'card-value ' + (totalPct >= 0 ? 'pnl-positive' : 'pnl-negative');
 
-            // 尋找最大單筆虧損
+            // 尋找單筆最大虧損 (僅顯示於儀表板)
             const minPct = Math.min(...closedTrades.map(t => t.pnlPct));
             document.getElementById('max-loss').innerText = (minPct < 0 ? minPct.toFixed(2) : 0) + '%';
             
-            document.getElementById('global-warning').style.display = minPct <= -10 ? 'block' : 'none';
+            // ================= 新增：當日累計虧損風控邏輯 =================
+            const now = new Date();
+            // 取得今天凌晨 00:00:00 的時間戳記
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            
+            // 獨立篩選出「當日」且「已平倉」的交易
+            const todayClosedTrades = trades.filter(t => {
+                return t.status === 'Closed' && new Date(t.date).getTime() >= startOfToday;
+            });
+            
+            // 計算當日的累計總盈虧 %
+            const todayTotalPct = todayClosedTrades.reduce((sum, t) => sum + t.pnlPct, 0);
+
+            // 當日累計虧損達到 10% (即數值 <= -10) 時，才顯示紅色警報框
+            document.getElementById('global-warning').style.display = todayTotalPct <= -10 ? 'block' : 'none';
+            // ==========================================================
+
         } else {
             document.getElementById('win-rate').innerText = '0%';
             document.getElementById('total-pnl-amt').innerText = '$0.00';
