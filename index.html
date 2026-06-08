@@ -2,58 +2,114 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SOP 開倉計畫 | 終極交易系統</title>
     <style>
-        :root { --bg: #0f172a; --panel: #1e293b; --text: #f8fafc; --accent: #3b82f6; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
-        .container { background: var(--panel); padding: 20px; border-radius: 8px; width: 100%; max-width: 400px; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 12px; color: #94a3b8; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 4px; }
-        button { width: 100%; padding: 12px; background: var(--accent); border: none; color: white; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        :root { --bg-color: #0f172a; --panel-bg: #1e293b; --text-main: #f8fafc; --text-muted: #94a3b8; --accent-green: #10b981; --accent-red: #ef4444; --accent-blue: #3b82f6; --border-color: #334155; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header { margin-bottom: 30px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .nav-btn { background: transparent; border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: bold; transition: 0.2s; }
+        .nav-btn:hover { background: var(--accent-blue); color: white; }
+
+        .stepper-wrapper { background-color: var(--panel-bg); padding: 30px; border-radius: 8px; border: 1px solid var(--border-color); }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; font-size: 14px; color: var(--text-muted); margin-bottom: 8px; }
+        input { width: 100%; padding: 12px; background-color: var(--bg-color); border: 1px solid var(--border-color); color: var(--text-main); border-radius: 6px; font-size: 14px; }
+        input:focus { outline: none; border-color: var(--accent-blue); }
+        
+        .direction-btns { display: flex; gap: 10px; }
+        .dir-btn { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer; text-align: center; font-size: 14px; }
+        .dir-btn.active.long { background-color: rgba(16, 185, 129, 0.2); border-color: var(--accent-green); color: var(--accent-green); font-weight: bold; }
+        .dir-btn.active.short { background-color: rgba(239, 68, 68, 0.2); border-color: var(--accent-red); color: var(--accent-red); font-weight: bold; }
+
+        .action-btns { margin-top: 30px; border-top: 1px solid var(--border-color); padding-top: 20px; }
+        .btn-success { background-color: var(--accent-green); color: white; width: 100%; padding: 12px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-success:hover { background-color: #059669; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📝 快速開倉紀錄</h2>
-    <div class="form-group">
-        <label>合約標的</label>
-        <input type="text" id="symbol" placeholder="例如: BTCUSDT">
+    <header>
+        <h1>✚ 新建開倉計畫 (快速)</h1>
+        <div style="display: flex; gap: 10px;">
+            <a href="index.html" class="nav-btn" style="background: var(--accent-blue); color: white;">開倉計畫</a>
+            <a href="journal.html" class="nav-btn">復盤日誌</a>
+            <a href="tools.html" class="nav-btn">交易工具箱</a>
+        </div>
+    </header>
+
+    <div class="stepper-wrapper">
+        <div class="form-group">
+            <label>合約標的 (如: BTCUSDT)</label>
+            <input type="text" id="symbol" placeholder="輸入交易對">
+        </div>
+        
+        <div class="form-group">
+            <label>方向</label>
+            <div class="direction-btns">
+                <div class="dir-btn active long" onclick="setDir('Long', this)">📈 做多 (Long)</div>
+                <div class="dir-btn short" onclick="setDir('Short', this)">📉 做空 (Short)</div>
+            </div>
+            <input type="hidden" id="direction" value="Long">
+        </div>
+
+        <div class="form-group"><label>計畫進場價格</label><input type="number" id="entry" step="any"></div>
+        <div class="form-group"><label>硬止損價格</label><input type="number" id="sl" step="any"></div>
+        <div class="form-group"><label>第一止盈目標</label><input type="number" id="tp" step="any"></div>
+
+        <div class="action-btns">
+            <button type="button" class="btn-success" onclick="createTrade()">💾 儲存並跳轉至日誌</button>
+        </div>
     </div>
-    <div class="form-group">
-        <label>方向</label>
-        <select id="direction">
-            <option value="Long">做多 (Long)</option>
-            <option value="Short">做空 (Short)</option>
-        </select>
-    </div>
-    <div class="form-group">
-        <label>進場價格 / 止損 / 止盈</label>
-        <input type="number" id="entry" placeholder="進場價" style="margin-bottom:5px">
-        <input type="number" id="sl" placeholder="止損價" style="margin-bottom:5px">
-        <input type="number" id="tp" placeholder="止盈價">
-    </div>
-    <button onclick="saveTrade()">💾 儲存並紀錄</button>
 </div>
 
 <script>
-    function saveTrade() {
-        const trade = {
-            id: Date.now(),
-            symbol: document.getElementById('symbol').value,
-            dir: document.getElementById('direction').value,
-            entry: document.getElementById('entry').value,
-            sl: document.getElementById('sl').value,
-            tp: document.getElementById('tp').value,
-            date: new Date().toLocaleString()
-        };
+    let trades = JSON.parse(localStorage.getItem('trading_master')) || [];
+
+    function setDir(dir, el) {
+        document.getElementById('direction').value = dir;
+        document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active', 'long', 'short'));
+        el.classList.add('active', dir === 'Long' ? 'long' : 'short');
+    }
+
+    function createTrade() {
+        // 驗證核心欄位
+        if(!document.getElementById('symbol').value) return alert('請填寫標的');
+        if(!document.getElementById('entry').value || !document.getElementById('sl').value) return alert('請填寫進場與止損價');
+
+        const entry = parseFloat(document.getElementById('entry').value);
+        const sl = parseFloat(document.getElementById('sl').value);
+        const tp = parseFloat(document.getElementById('tp').value);
         
-        let trades = JSON.parse(localStorage.getItem('trading_master') || '[]');
-        trades.unshift(trade);
+        let rr = '-';
+        if(entry && sl && tp) {
+            rr = (Math.abs(tp - entry) / Math.abs(entry - sl)).toFixed(2);
+        }
+
+        const newTrade = {
+            id: Date.now(),
+            date: new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString('en-US', {hour12: false}).slice(0,5),
+            symbol: document.getElementById('symbol').value.toUpperCase(),
+            dir: document.getElementById('direction').value,
+            reason: '快速開倉', // 預設理由
+            rr: rr,
+            status: 'Open', 
+            pnlPct: null,
+            pnlAmt: null,
+            notes: ''
+        };
+
+        trades.unshift(newTrade);
         localStorage.setItem('trading_master', JSON.stringify(trades));
-        alert('紀錄成功！');
+        
         window.location.href = 'journal.html';
     }
 </script>
+
 </body>
 </html>
