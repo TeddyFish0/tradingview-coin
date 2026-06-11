@@ -211,17 +211,16 @@
             let dirClass = trade.dir === 'Long' || trade.dir === '多' ? 'dir-long' : 'dir-short';
             let dirText = trade.dir === 'Long' || trade.dir === '多' ? '📈 多' : '📉 空';
             
-            // 若為剛開倉尚未平倉的狀態，給予預設顯示
             let displayPct = trade.pnlPct !== null ? `${pnlSign}${trade.pnlPct}%` : '-';
             let displayAmt = trade.pnlAmt !== null ? `${pnlSign}$${trade.pnlAmt}` : '-';
             let displayStatus = trade.status === 'Open' ? '持倉中' : trade.status;
 
-            // 動態產生操作按鈕：持倉中才有「平倉」按鈕
+            // 動態產生操作按鈕：加入單引號 '${trade.id}' 保護 ID，確保瀏覽器正確解析
             let actionButtons = '';
             if (trade.status === 'Open') {
-                actionButtons += `<button class="action-btn" style="color: var(--accent-blue); border-color: var(--accent-blue); margin-right: 8px;" onclick="closeTrade(${trade.id})">平倉</button>`;
+                actionButtons += `<button class="action-btn" style="color: var(--accent-blue); border-color: var(--accent-blue); margin-right: 8px;" onclick="closeTrade('${trade.id}')">平倉</button>`;
             }
-            actionButtons += `<button class="action-btn" onclick="deleteTrade(${trade.id})">刪除</button>`;
+            actionButtons += `<button class="action-btn" onclick="deleteTrade('${trade.id}')">刪除</button>`;
 
             tbody.innerHTML += `
                 <tr>
@@ -245,7 +244,19 @@
         });
     }
 
-   // 1. 打開平倉視窗
+    // ─── 以下是所有按鈕對應的執行函數 ───
+
+    // 執行刪除紀錄 (修復版)
+    function deleteTrade(id) {
+        if(confirm('確定要刪除這筆紀錄嗎？')) {
+            // 使用 String() 強制轉型比對，確保無論如何都能準確刪除
+            trades = trades.filter(t => String(t.id) !== String(id));
+            localStorage.setItem('trading_master', JSON.stringify(trades));
+            renderDashboard();
+        }
+    }
+
+    // 打開平倉視窗
     function closeTrade(id) {
         document.getElementById('close-trade-id').value = id;
         document.getElementById('close-pct').value = '';
@@ -254,26 +265,26 @@
         document.getElementById('close-modal').style.display = 'flex';
     }
 
-    // 2. 關閉平倉視窗
+    // 關閉平倉視窗
     function closeModalUI() {
         document.getElementById('close-modal').style.display = 'none';
     }
 
-    // 3. 確認送出平倉資料
+    // 確認送出平倉資料
     function confirmCloseTrade() {
-        let id = parseInt(document.getElementById('close-trade-id').value);
+        let id = document.getElementById('close-trade-id').value;
         let pctInput = document.getElementById('close-pct').value;
         let amtInput = document.getElementById('close-amt').value;
         let notesInput = document.getElementById('close-notes').value;
 
-        let index = trades.findIndex(t => t.id === id);
+        // 使用 String() 強制轉型比對
+        let index = trades.findIndex(t => String(t.id) === String(id));
         if (index !== -1) {
             trades[index].status = '已平倉';
             trades[index].pnlPct = parseFloat(pctInput) || 0;
             trades[index].pnlAmt = parseFloat(amtInput) || 0;
             trades[index].notes = notesInput || '';
             
-            // 儲存、關閉視窗並重新渲染畫面
             localStorage.setItem('trading_master', JSON.stringify(trades));
             closeModalUI();
             renderDashboard();
