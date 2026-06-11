@@ -210,6 +210,13 @@
             let displayAmt = trade.pnlAmt !== null ? `${pnlSign}$${trade.pnlAmt}` : '-';
             let displayStatus = trade.status === 'Open' ? '持倉中' : trade.status;
 
+            // 動態產生操作按鈕：持倉中才有「平倉」按鈕
+            let actionButtons = '';
+            if (trade.status === 'Open') {
+                actionButtons += `<button class="action-btn" style="color: var(--accent-blue); border-color: var(--accent-blue); margin-right: 8px;" onclick="closeTrade(${trade.id})">平倉</button>`;
+            }
+            actionButtons += `<button class="action-btn" onclick="deleteTrade(${trade.id})">刪除</button>`;
+
             tbody.innerHTML += `
                 <tr>
                     <td>${trade.date}</td>
@@ -226,15 +233,30 @@
                     <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                         ${trade.notes ? `[復盤] ${trade.notes}` : `[復盤] 無`}
                     </td>
-                    <td><button class="action-btn" onclick="deleteTrade(${trade.id})">刪除</button></td>
+                    <td>${actionButtons}</td>
                 </tr>
             `;
         });
     }
 
-    function deleteTrade(id) {
-        if(confirm('確定要刪除這筆紀錄嗎？')) {
-            trades = trades.filter(t => t.id !== id);
+    // 補回平倉邏輯 (若你已有自定義平窗邏輯，請替換此函數內容)
+    function closeTrade(id) {
+        let pctInput = prompt('請輸入實際盈虧百分比 (%)，例如：10.5 或 -5.2');
+        if (pctInput === null) return; // 按下取消
+        
+        let amtInput = prompt('請輸入實際盈虧金額 ($)，例如：15.5 或 -8.3');
+        if (amtInput === null) return;
+
+        let notesInput = prompt('請輸入事後復盤筆記 (選填)：', '');
+
+        let index = trades.findIndex(t => t.id === id);
+        if (index !== -1) {
+            trades[index].status = '已平倉';
+            trades[index].pnlPct = parseFloat(pctInput) || 0;
+            trades[index].pnlAmt = parseFloat(amtInput) || 0;
+            trades[index].notes = notesInput || '';
+            
+            // 儲存並重新渲染畫面
             localStorage.setItem('trading_master', JSON.stringify(trades));
             renderDashboard();
         }
