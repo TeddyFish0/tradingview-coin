@@ -50,6 +50,12 @@
         .dir-short { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
         .action-btn { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); padding: 4px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; }
         .action-btn:hover { background: var(--border-color); color: var(--text-main); }
+        /* 專屬平倉彈出視窗 (Modal) 樣式 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.2s; }
+        .modal-content { background: var(--panel-bg); padding: 30px; border-radius: 8px; border: 1px solid var(--border-color); width: 100%; max-width: 400px; }
+        .modal-title { margin-bottom: 20px; font-size: 18px; color: var(--accent-blue); font-weight: bold; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; }
+        .modal-content .form-group { margin-bottom: 15px; }
     </style>
 </head>
 <body>
@@ -239,15 +245,26 @@
         });
     }
 
-    // 補回平倉邏輯 (若你已有自定義平窗邏輯，請替換此函數內容)
+   // 1. 打開平倉視窗
     function closeTrade(id) {
-        let pctInput = prompt('請輸入實際盈虧百分比 (%)，例如：10.5 或 -5.2');
-        if (pctInput === null) return; // 按下取消
-        
-        let amtInput = prompt('請輸入實際盈虧金額 ($)，例如：15.5 或 -8.3');
-        if (amtInput === null) return;
+        document.getElementById('close-trade-id').value = id;
+        document.getElementById('close-pct').value = '';
+        document.getElementById('close-amt').value = '';
+        document.getElementById('close-notes').value = '';
+        document.getElementById('close-modal').style.display = 'flex';
+    }
 
-        let notesInput = prompt('請輸入事後復盤筆記 (選填)：', '');
+    // 2. 關閉平倉視窗
+    function closeModalUI() {
+        document.getElementById('close-modal').style.display = 'none';
+    }
+
+    // 3. 確認送出平倉資料
+    function confirmCloseTrade() {
+        let id = parseInt(document.getElementById('close-trade-id').value);
+        let pctInput = document.getElementById('close-pct').value;
+        let amtInput = document.getElementById('close-amt').value;
+        let notesInput = document.getElementById('close-notes').value;
 
         let index = trades.findIndex(t => t.id === id);
         if (index !== -1) {
@@ -256,12 +273,39 @@
             trades[index].pnlAmt = parseFloat(amtInput) || 0;
             trades[index].notes = notesInput || '';
             
-            // 儲存並重新渲染畫面
+            // 儲存、關閉視窗並重新渲染畫面
             localStorage.setItem('trading_master', JSON.stringify(trades));
+            closeModalUI();
             renderDashboard();
         }
     }
 </script>
 
+    <div class="modal-overlay" id="close-modal">
+        <div class="modal-content">
+            <div class="modal-title">📉 執行平倉結算</div>
+            <input type="hidden" id="close-trade-id">
+            
+            <div class="form-group">
+                <label>實際盈虧百分比 (%)</label>
+                <input type="number" id="close-pct" step="any" placeholder="例如: 10.5 或 -5.2">
+            </div>
+            
+            <div class="form-group">
+                <label>實際盈虧金額 ($)</label>
+                <input type="number" id="close-amt" step="any" placeholder="例如: 15.5 或 -8.3">
+            </div>
+            
+            <div class="form-group">
+                <label>事後復盤筆記</label>
+                <input type="text" id="close-notes" placeholder="檢討或筆記 (選填)">
+            </div>
+            
+            <div class="modal-actions">
+                <button class="nav-btn" onclick="closeModalUI()">取消</button>
+                <button class="btn-success" style="width: auto;" onclick="confirmCloseTrade()">確認平倉</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
